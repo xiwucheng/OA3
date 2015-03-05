@@ -599,101 +599,43 @@ repeat:
 	}
 	else
 	{
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在比较KEY码......"));
-		if (fp.Open(TEXT("oa3.xml"),CFile::modeRead))
+		p->SetDlgItemText(IDC_STATUS,TEXT("正在上传CBR 报告......"));
+		iCount = 5;
+		while (iCount-- > 0)
 		{
-			dwLen = (DWORD)fp.GetLength();
-			szBuf = new char[dwLen];
-			fp.Read(szBuf,dwLen);
-			fp.Close();
-			char *pt = strstr(szBuf,"<ProductKeyID>");
-			if (pt)
-			{
-				memset(szFileKeyID,0,sizeof(szFileKeyID));
-				strncpy(szFileKeyID,pt+14,13);
-			}
-			delete szBuf;
-		}
-		retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject win32_operatingsystem).serialnumber",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
-		if(retval)
-		{
+			retval=CreateProcessA(NULL,"cmd.exe /c oa3tool.exe /report /configfile=oa3tool.cfg",&sa,&sa,0,0,NULL,NULL,&si,&pi);
 			WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
-			dwLen=GetFileSize(hReadPipe,NULL);
-			memset(szKeyID,0,sizeof(szKeyID));
-			retval=ReadFile(hReadPipe,szKeyID,dwLen,&dwRead,NULL);
-			char szTmpBuff[32]={0};
-			pt=szKeyID;
-			szBuf=szTmpBuff;
-			while (*pt)
+			GetExitCodeProcess(pi.hProcess,&retCode);
+			if (retCode == 0)
 			{
-				if (*pt > '0')
-				{
-					break;
-				}
-				pt++;
-			}
-			while (*pt)
-			{
-				if (isdigit(*pt))
-				{
-					*szBuf++ = *pt;
-				}
-				if (isalpha(*pt))
-				{
-					*szBuf = 0;
-					break;
-				}
-				pt++;
-			}
-			memset(szKeyID,0,sizeof(szKeyID));
-			strcpy(szKeyID,szTmpBuff);
-		}
-
-		if (strcmp(szKeyID,szFileKeyID) == 0)//检查PKID是否和CBR中的一致
-		{
-			p->SetDlgItemText(IDC_STATUS,TEXT("正在上传CBR 报告......"));
-			iCount = 5;
-			while (iCount-- > 0)
-			{
-				retval=CreateProcessA(NULL,"cmd.exe /c oa3tool.exe /report /configfile=oa3tool.cfg",&sa,&sa,0,0,NULL,NULL,&si,&pi);
-				WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
-				GetExitCodeProcess(pi.hProcess,&retCode);
-				if (retCode == 0)
-				{
-					bHasCBR = TRUE;
-				}
-				if (retCode == 0xc0000134)
-				{
-					break;
-				}
+				bHasCBR = TRUE;
 			}
 			if (retCode == 0xc0000134)
 			{
-				if (bHasCBR)
-				{
-					mbstowcs(wszPKID,szKeyID,32);
-					p->SetDlgItemText(IDC_PKID,wszPKID);
-					p->MessageBox(TEXT("CBR 上传成功！"),TEXT("CBR"),MB_ICONINFORMATION);
-					p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传成功！......"));
-				}
-				else
-				{
-					p->MessageBox(TEXT("CBR 已上传，请不要重复提交！"),TEXT("CBR"),MB_ICONWARNING);
-					p->SetDlgItemText(IDC_STATUS,TEXT("CBR 已上传，请勿重复提交！......"));
-				}
-				goto __end;
+				break;
+			}
+		}
+		if (retCode == 0xc0000134)
+		{
+			if (bHasCBR)
+			{
+				mbstowcs(wszPKID,szKeyID,32);
+				p->SetDlgItemText(IDC_PKID,wszPKID);
+				p->MessageBox(TEXT("CBR 上传成功！"),TEXT("CBR"),MB_ICONINFORMATION);
+				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传成功！......"));
 			}
 			else
 			{
-				p->MessageBox(TEXT("CBR 上传失败！"),TEXT("CBR"),MB_ICONERROR);
-				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传失败......"));
-				goto __end;
+				p->MessageBox(TEXT("CBR 已上传，请不要重复提交！"),TEXT("CBR"),MB_ICONWARNING);
+				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 已上传，请勿重复提交！......"));
 			}
+			goto __end;
 		}
 		else
 		{
-			p->MessageBox(TEXT("CBR的PKID与该机器的不一致，请确认此CBR是否由其它机器生成的！"),TEXT("CBR不匹配"),MB_ICONWARNING);
-			p->SetDlgItemText(IDC_STATUS,TEXT(""));
+			p->MessageBox(TEXT("CBR 上传失败！"),TEXT("CBR"),MB_ICONERROR);
+			p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传失败......"));
+			goto __end;
 		}
 	}
 
