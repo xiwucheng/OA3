@@ -514,7 +514,7 @@ repeat:
 		}
 		len=sizeof(KeyInfo) - 4;
 		p->m_KeyInfo.CRC = p->CRC32(0xFFFFFFFF,(BYTE*)&p->m_KeyInfo,len);
-		cnt = 3, cnt2 = 10;
+		cnt = 1, cnt2 = 10;
 		p->m_bAccept = FALSE;
 		while (cnt-- >0)
 		{
@@ -523,7 +523,7 @@ repeat:
 				cnt2 = 10;
 				while (!p->m_bAccept && cnt2-- > 0)
 				{
-					Sleep(500);
+					Sleep(1000);
 				}
 				if (p->m_bAccept)
 				{
