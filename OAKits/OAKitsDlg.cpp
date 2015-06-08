@@ -354,7 +354,7 @@ void COAKitsDlg::OnBnClickedStart()
 
 	if (inet_addr(m_ip) == INADDR_NONE)
 	{
-		MessageBox(TEXT("IP地址无效，请核对一下oa3tool.cfg文件中的IP地址是否正确"),TEXT("无效的IP地址"),MB_ICONERROR);
+		MessageBox(TEXT("Invalid ip address，please check ip address in oa3tool.cfg"),TEXT("Invalid ip address"),MB_ICONERROR);
 		GetDlgItem(IDC_START)->EnableWindow();
 		GetDlgItem(IDC_CBR)->EnableWindow();
 		GetDlgItem(IDOK)->EnableWindow();
@@ -409,18 +409,18 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 	si.dwFlags=STARTF_USESHOWWINDOW|STARTF_USESTDHANDLES;
 	si.hStdOutput=si.hStdError=hWritePipe;
 
-	p->SetDlgItemText(IDC_STATUS,TEXT("正在连接服务器......"));
+	p->SetDlgItemText(IDC_STATUS,TEXT("connecting server......"));
 	if (!p->m_pClient->IsOpen()) 
 	{
 		p->m_pClient->Open();
 	}
 	if (!p->m_pClient->Connect(p->m_ip,p->m_port))
 	{
-		p->MessageBox(TEXT("连接管理服务器失败"),TEXT("连接出错"),MB_ICONERROR);
+		p->MessageBox(TEXT("connect server failed"),TEXT("connection error"),MB_ICONERROR);
 		goto __end;
 	}
 
-	p->SetDlgItemText(IDC_STATUS,TEXT("正在查询机器序列号......"));
+	p->SetDlgItemText(IDC_STATUS,TEXT("inquiring product key......"));
 	retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject softwarelicensingservice).OA3xOriginalProductKey",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
 	if(retval)
 	{
@@ -435,14 +435,14 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 
 	if (!bHasKey)
 	{
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在从服务器获取KEY......"));
+		p->SetDlgItemText(IDC_STATUS,TEXT("getting key from server......"));
 		retval=CreateProcessA(NULL,"cmd.exe /c oa3tool.exe /assemble /configfile=oa3tool.cfg",&sa,&sa,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
 		GetExitCodeProcess(pi.hProcess,&retCode);
 		if (retCode)
 		{
-			p->MessageBox(TEXT("获取Key失败"),TEXT("错误"),MB_ICONERROR);
-			p->SetDlgItemText(IDC_STATUS,TEXT("获取Key失败......"));
+			p->MessageBox(TEXT("get key failed"),TEXT("error"),MB_ICONERROR);
+			p->SetDlgItemText(IDC_STATUS,TEXT("get key failed......"));
 			goto __end;
 		}
 		p->GetDeviceAddress();
@@ -466,40 +466,8 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 			}
 			delete szBuf;
 		}
-		p->SetDlgItemText(IDC_STATUS,TEXT("等待主板序列号的输入......"));
-repeat:
-		if (dlg.DoModal()==IDOK)
-		{
-			szSN = dlg.m_strSN;
-		}
-		else
-		{
-			szSN = TEXT("0000000000000000000000000");
-		}
 
-		if (szSN.GetLength() == 0)
-		{
-			p->MessageBox(TEXT("主板序列号不能为空，请输入序列号按OK确认，取消则默认序列号为0"),TEXT("错误"),MB_ICONERROR);
-			goto repeat;
-		}
-
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在写入序列号......"));
-		szBSN = TEXT("cmd.exe /c amidewin.exe /bs \"");
-		szBSN += szSN;
-		szBSN += TEXT("\"");
-		memset(wszTmp,0,sizeof(wszTmp));
-		wcscpy(wszTmp,szBSN.GetBuffer(1024));
-		wcstombs(szTmp,wszTmp,1024);
-		szBSN.ReleaseBuffer();
-		CreateProcessA(NULL,szTmp,&sa,&sa,0,0,NULL,NULL,&si,&pi);
-		WaitForSingleObject(pi.hThread,INFINITE);
-
-		memset(wszTmp,0,sizeof(wszTmp));
-		wcscpy(wszTmp,szSN.GetBuffer(32));
-		wcstombs(p->m_KeyInfo.SN,wszTmp,32);
-		szSN.ReleaseBuffer();
-
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在刷入KEY码......"));
+		p->SetDlgItemText(IDC_STATUS,TEXT("injecting key into bios......"));
 		retval=CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
 		CreateProcessA(NULL,"cmd.exe /c afuwin.exe /aoa3.bin",0,0,0,0,NULL,NULL,&si,&pi);
@@ -508,8 +476,8 @@ repeat:
 
 		if (retCode)
 		{
-			p->MessageBox(TEXT("Key 刷写失败"),TEXT("错误"),MB_ICONERROR);
-			p->SetDlgItemText(IDC_STATUS,TEXT("Key刷写失败！"));
+			p->MessageBox(TEXT("Inject key failed"),TEXT("Error"),MB_ICONERROR);
+			p->SetDlgItemText(IDC_STATUS,TEXT("Inject key failed!"));
 			goto __end;
 		}
 		len=sizeof(KeyInfo) - 4;
@@ -533,12 +501,12 @@ repeat:
 		}
 		if (!p->m_bAccept)
 		{
-			p->MessageBox(TEXT("平板信息上传出错了，需要回收此Key重刷！"),TEXT("上传出错"),MB_ICONERROR);
-			p->SetDlgItemText(IDC_STATUS,TEXT("上传平板信息出错......"));
+			p->MessageBox(TEXT("Upload failed，please revert this key to repeat"),TEXT("Upload failed"),MB_ICONERROR);
+			p->SetDlgItemText(IDC_STATUS,TEXT("Upload failed......"));
 			goto __end;
 		}
 
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在对比CBR报告，请稍候......"));
+		p->SetDlgItemText(IDC_STATUS,TEXT("Comparing CBR，please wait......"));
 
 		memset(szKey,0,sizeof(szKey));
 		retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject softwarelicensingservice).OA3xOriginalProductKey",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
@@ -551,7 +519,7 @@ repeat:
 
 		if (strncmp(szKey,p->m_KeyInfo.KEY,strlen(p->m_KeyInfo.KEY)) == 0)//检查机器中的KEY是否和CBR中的一致
 		{
-			p->SetDlgItemText(IDC_STATUS,TEXT("正在上传CBR 报告......"));
+			p->SetDlgItemText(IDC_STATUS,TEXT("Uploading CBR......"));
 			iCount = 5;
 			while (iCount-- > 0)
 			{
@@ -573,33 +541,33 @@ repeat:
 				{
 					mbstowcs(wszPKID,p->m_KeyInfo.PKID,32);
 					p->SetDlgItemText(IDC_PKID,wszPKID);
-					p->MessageBox(TEXT("CBR 上传成功！"),TEXT("CBR"),MB_ICONINFORMATION);
-					p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传成功！......"));
+					p->MessageBox(TEXT("Upload CBR successfully!"),TEXT("CBR"),MB_ICONINFORMATION);
+					p->SetDlgItemText(IDC_STATUS,TEXT("Upload CBR successfully!......"));
 				}
 				else
 				{
-					p->MessageBox(TEXT("CBR 已上传，请不要重复提交！"),TEXT("CBR"),MB_ICONWARNING);
-					p->SetDlgItemText(IDC_STATUS,TEXT("CBR 已上传，请误重复提交！......"));
+					p->MessageBox(TEXT("CBR has been uploaded，do not upload again"),TEXT("CBR"),MB_ICONWARNING);
+					p->SetDlgItemText(IDC_STATUS,TEXT("CBR has been uploaded，do not upload again!......"));
 				}
 				goto __end;
 			}
 			else
 			{
-				p->MessageBox(TEXT("CBR 上传失败！"),TEXT("CBR"),MB_ICONERROR);
-				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传失败......"));
+				p->MessageBox(TEXT("Upload CBR failed"),TEXT("CBR"),MB_ICONERROR);
+				p->SetDlgItemText(IDC_STATUS,TEXT("Upload CBR failed!......"));
 				goto __end;
 			}
 		}
 		else//刷完后两者不一致，需要重启才能生效
 		{
-			p->MessageBox(TEXT("需要重启机器才能上传CBR，按OK立即重启!"),TEXT("警告"),MB_ICONWARNING);
+			p->MessageBox(TEXT("need reboot to upload CBR"),TEXT("Warning"),MB_ICONWARNING);
 			p->Reboot();
 			goto __end;
 		}
 	}
 	else
 	{
-		p->SetDlgItemText(IDC_STATUS,TEXT("正在上传CBR 报告......"));
+		p->SetDlgItemText(IDC_STATUS,TEXT("Uploading CBR......"));
 		iCount = 5;
 		while (iCount-- > 0)
 		{
@@ -621,20 +589,20 @@ repeat:
 			{
 				mbstowcs(wszPKID,szKeyID,32);
 				p->SetDlgItemText(IDC_PKID,wszPKID);
-				p->MessageBox(TEXT("CBR 上传成功！"),TEXT("CBR"),MB_ICONINFORMATION);
-				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传成功！......"));
+				p->MessageBox(TEXT("Upload CBR successfully!"),TEXT("CBR"),MB_ICONINFORMATION);
+				p->SetDlgItemText(IDC_STATUS,TEXT("Upload CBR successfully!......"));
 			}
 			else
 			{
-				p->MessageBox(TEXT("CBR 已上传，请不要重复提交！"),TEXT("CBR"),MB_ICONWARNING);
-				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 已上传，请勿重复提交！......"));
+				p->MessageBox(TEXT("CBR has been uploaded，do not upload again"),TEXT("CBR"),MB_ICONWARNING);
+				p->SetDlgItemText(IDC_STATUS,TEXT("CBR has been uploaded，do not upload again......"));
 			}
 			goto __end;
 		}
 		else
 		{
-			p->MessageBox(TEXT("CBR 上传失败！"),TEXT("CBR"),MB_ICONERROR);
-			p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传失败......"));
+			p->MessageBox(TEXT("Upload CBR failed"),TEXT("CBR"),MB_ICONERROR);
+			p->SetDlgItemText(IDC_STATUS,TEXT("Upload CBR failed......"));
 			goto __end;
 		}
 	}
@@ -681,7 +649,7 @@ UINT COAKitsDlg::CBRThread(LPVOID lp)
 	si.dwFlags=STARTF_USESHOWWINDOW|STARTF_USESTDHANDLES;
 	si.hStdOutput=si.hStdError=hWritePipe;
 
-	p->SetDlgItemText(IDC_STATUS,TEXT("正在查询机器的KEY码......"));
+	p->SetDlgItemText(IDC_STATUS,TEXT("inquiring product key............"));
 	retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject softwarelicensingservice).OA3xOriginalProductKey",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
 	if(retval)
 	{
@@ -696,20 +664,20 @@ UINT COAKitsDlg::CBRThread(LPVOID lp)
 
 	if (bHasKey)
 	{
-		if (IDYES == p->MessageBox(TEXT("确定要擦除此设备中的KEY吗？"),TEXT("警告"),MB_YESNO|MB_ICONWARNING))
+		if (IDYES == p->MessageBox(TEXT("Are you sure to erase the key?"),TEXT("Warning"),MB_YESNO|MB_ICONWARNING))
 		{
-			p->SetDlgItemText(IDC_STATUS,TEXT("正在删除KEY码......"));
+			p->SetDlgItemText(IDC_STATUS,TEXT("Erasing key......"));
 			CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
 			WaitForSingleObject(pi.hThread,INFINITE);
 			GetExitCodeProcess(pi.hProcess,&retCode);
 			if (retCode == 0)
 			{
-				p->MessageBox(TEXT("KEY擦除成功，按确认后系统将重启！"),TEXT("提示"),MB_ICONINFORMATION);
+				p->MessageBox(TEXT("Erase key successfully，system will be reboot"),TEXT("Reminder"),MB_ICONINFORMATION);
 				p->Reboot();
 			}
 			else
 			{
-				p->MessageBox(TEXT("此机器中的KEY已经擦除，需要重启才能生效！"),TEXT("提示"),MB_ICONINFORMATION);
+				p->MessageBox(TEXT("Key has been erased, reboot to take effect"),TEXT("Reminder"),MB_ICONINFORMATION);
 				p->Reboot();
 			}
 			p->SetDlgItemText(IDC_STATUS,TEXT(""));
@@ -717,7 +685,7 @@ UINT COAKitsDlg::CBRThread(LPVOID lp)
 	}
 	else
 	{
-		p->MessageBox(TEXT("此机器中不存在KEY，无需擦除！"),TEXT("错误"),MB_ICONERROR);
+		p->MessageBox(TEXT("There is no key in device"),TEXT("Error"),MB_ICONERROR);
 		p->SetDlgItemText(IDC_STATUS,TEXT(""));
 	}
 	CloseHandle(hWritePipe);
