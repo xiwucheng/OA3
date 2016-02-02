@@ -136,7 +136,7 @@ BOOL COAServerKitsDlg::OnInitDialog()
 	nid.hWnd=m_hWnd;
 	nid.uFlags=NIF_ICON|NIF_MESSAGE|NIF_TIP;
 	nid.uID=IDR_MAINFRAME;
-	_tcscpy(nid.szTip,"OAServerKits");
+	_tcscpy(nid.szTip,"OAServerKits_v6.0");
 	nid.uCallbackMessage=WM_SHELLICON;
 	Shell_NotifyIcon(NIM_ADD,&nid);
 	menu.LoadMenu(IDR_MAINFRAME);
@@ -157,7 +157,6 @@ BOOL COAServerKitsDlg::OnInitDialog()
 	{
 		pBox->SetCurSel(0);
 	}
-	SetDlgItemInt(IDC_PORT,300,0);
 	m_pServer = new CTCPServer(this);
 	m_pServer->m_OnClientConnect = OnClientConnect;
 	m_pServer->m_OnClientClose = OnClientClose;
@@ -230,18 +229,11 @@ void COAServerKitsDlg::OnBnClickedMonitor()
 		m_bStart=FALSE;
 		AddLog("Server is stopped");
 		GetDlgItem(IDC_IPCOMBOX)->EnableWindow();
-		GetDlgItem(IDC_PORT)->EnableWindow();
 		GetDlgItem(IDC_FILENAME)->EnableWindow();
 	}
 	else
 	{
-		int port=GetDlgItemInt(IDC_PORT,0,0);
-		if (port < 300 || port >= 400)
-		{
-			MessageBox("please enter port number from 300 to 399","Out of range",MB_ICONERROR);
-			return;
-		}
-		if (m_pServer->Open(port)!=1)
+		if (m_pServer->Open(4000)!=1)
 		{
 			MessageBox("service not start","error",MB_ICONERROR);
 			return;
@@ -250,7 +242,6 @@ void COAServerKitsDlg::OnBnClickedMonitor()
 		m_bStart=TRUE;
 		AddLog("Server is running");
 		GetDlgItem(IDC_IPCOMBOX)->EnableWindow(0);
-		GetDlgItem(IDC_PORT)->EnableWindow(0);
 		GetDlgItem(IDC_FILENAME)->EnableWindow(0);
 	}
 }
@@ -329,6 +320,10 @@ void CALLBACK COAServerKitsDlg::OnClientRead(void* pOwner, CTCPCustom* pCustom, 
 		{
 			if (len != sizeof(KeyInfo))
 			{
+				if (len == 9 && strcmp(buf,"handshake") == 0)
+				{
+					pCustom->SendData("authorized",strlen("authorized"));
+				}
 				break;
 			}
 			memcpy(&pKeyInfo->m_KeyInfo,buf,sizeof(KeyInfo));
@@ -353,11 +348,13 @@ void CALLBACK COAServerKitsDlg::OnClientRead(void* pOwner, CTCPCustom* pCustom, 
 				int len=(int)fp.GetLength();
 				if (len == 0)
 				{
-					fp.Write("SN\t\t\t\tID\t\tKEY\t\t\t\tWIFI\t\t\tBT\t\t\tIMEI\r\n",(UINT)strlen("SN\t\t\t\tID\t\tKEY\t\t\t\tWIFI\t\t\tBT\t\t\tIMEI\r\n"));
+					fp.Write("BSN\t\t\t\tSSN\t\t\t\tID\t\tKEY\t\t\t\tWIFI\t\t\tBT\t\t\tIMEI\r\n",(UINT)strlen("SN\t\t\t\tID\t\tKEY\t\t\t\tWIFI\t\t\tBT\t\t\tIMEI\r\n"));
 				}
 				fp.SeekToEnd();
 				memset(buff,0,sizeof(buff));
-				strcat(buff,pKeyInfo->m_KeyInfo.SN);
+				strcat(buff,pKeyInfo->m_KeyInfo.BSN);
+				strcat(buff,"\t");
+				strcat(buff,pKeyInfo->m_KeyInfo.SSN);
 				strcat(buff,"\t");
 				strcat(buff,pKeyInfo->m_KeyInfo.PKID);
 				strcat(buff,"\t");

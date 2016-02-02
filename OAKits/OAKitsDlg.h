@@ -20,7 +20,8 @@
 // COAKitsDlg dialog
 typedef struct _tagKeyInfo
 {
-	char SN[32];
+	char BSN[32];
+	char SSN[32];
 	char PKID[32];
 	char KEY[32];
 	char WIFI[32];
@@ -63,7 +64,7 @@ public:
 	BOOL GetDeviceAddress();
 	BOOL GetIMEI();
 	afx_msg void OnBnClickedStart();
-	volatile BOOL m_bAccept;
+	volatile BOOL m_bAccept,m_bHandshake;
 public:
 	afx_msg void OnDestroy();
 public:

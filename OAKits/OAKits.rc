@@ -73,19 +73,19 @@ IDR_MAINFRAME           ICON                    "res\\OAKits.ico"
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 235, 55
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "关于 OAKits"
+CAPTION "About OAKits"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
-    LTEXT           "OAKits 版本5.0",IDC_STATIC,40,10,119,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2014",IDC_STATIC,40,25,119,8
+    LTEXT           "OAKits v6.1",IDC_STATIC,40,10,119,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2015",IDC_STATIC,40,25,119,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,16,WS_GROUP
 END
 
 IDD_OAKITS_DIALOG DIALOGEX 0, 0, 191, 71
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "OA3Client v5.1"
+CAPTION "OA3Client v6.1"
 FONT 12, "Courier", 400, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "执行",IDC_START,35,36,44,16
@@ -103,7 +103,7 @@ FONT 12, "Courier", 400, 0, 0x0
 BEGIN
     EDITTEXT        IDC_SN,12,17,132,12
     DEFPUSHBUTTON   "确定",IDOK,54,44,47,14
-    GROUPBOX        "请输入主板序列号",IDC_STATIC,3,2,149,36
+    GROUPBOX        "请输入主板序列号(关闭则跳过写序列号)",IDC_STATIC,2,2,150,36
 END
 
 
@@ -113,8 +113,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,1,0,1
- PRODUCTVERSION 5,1,0,1
+ FILEVERSION 6,1,0,0
+ PRODUCTVERSION 6,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -131,12 +131,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Techvision"
             VALUE "FileDescription", "OA Tool"
-            VALUE "FileVersion", "5.1"
+            VALUE "FileVersion", "6.1"
             VALUE "InternalName", "OAKits.exe"
             VALUE "LegalCopyright", "Kelvin Cheng.  All rights reserved."
             VALUE "OriginalFilename", "OAKits.exe"
             VALUE "ProductName", "OA Tool"
-            VALUE "ProductVersion", "5.1"
+            VALUE "ProductVersion", "6.1"
         END
     END
     BLOCK "VarFileInfo"
@@ -164,7 +164,6 @@ BEGIN
 
     IDD_SNDLG, DIALOG
     BEGIN
-        RIGHTMARGIN, 148
         BOTTOMMARGIN, 63
     END
 END

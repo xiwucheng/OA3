@@ -63,11 +63,11 @@ BOOL COAServerKitsApp::InitInstance()
 	// Change the registry key under which our settings are stored
 	// TODO: You should modify this string to be something appropriate
 	// such as the name of your company or organization
-	hMutex=OpenMutex(MUTEX_ALL_ACCESS,FALSE,"OAServerKits");
+	hMutex=OpenMutex(MUTEX_ALL_ACCESS,FALSE,"OAServerKits_v6");
 	if(hMutex)
 	{
 		//AfxMessageBox("程序已经启动，请双击对应的系统图标打开程序！",MB_ICONERROR);
-		HWND hWnd=FindWindow(NULL,"OAServerKits v5.0");
+		HWND hWnd=FindWindow(NULL,"OAServerKits v6.0");
 		if (hWnd)
 		{
 			if(!IsWindowVisible(hWnd))
@@ -78,7 +78,7 @@ BOOL COAServerKitsApp::InitInstance()
 	}
 	else
 	{
-		hMutex=CreateMutex(NULL,FALSE,"OAServerKits");
+		hMutex=CreateMutex(NULL,FALSE,"OAServerKits_v6");
 	}
 	SetRegistryKey(_T("OAServerKits"));
 

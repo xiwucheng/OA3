@@ -87,6 +87,10 @@ void CALLBACK COAKitsDlg::OnRead(void* pOwner, char* buf, int len)
 	{
 		p->m_bAccept = TRUE;
 	}
+	if (strcmp(buf,"authorized") == 0 && len == 10)
+	{
+		p->m_bHandshake = TRUE;
+	}
 }
 
 
@@ -216,6 +220,7 @@ COAKitsDlg::COAKitsDlg(CWnd* pParent /*=NULL*/)
 	memset(&m_KeyInfo,0,sizeof(KeyInfo));
 	m_pClient=NULL;
 	m_bAccept = FALSE;
+	m_bHandshake = FALSE;
 	init_crc_table();
 }
 
@@ -332,7 +337,7 @@ void COAKitsDlg::OnBnClickedStart()
 	DWORD dwLen;
 	char* szBuf;
 	memset(m_ip,0,sizeof(m_ip));
-	m_port = 300;
+	m_port = 4000;
 	GetDlgItem(IDC_START)->EnableWindow(0);
 	GetDlgItem(IDC_CBR)->EnableWindow(0);
 	GetDlgItem(IDOK)->EnableWindow(0);
@@ -420,6 +425,23 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 		goto __end;
 	}
 
+	p->m_bHandshake = FALSE;
+	if (!p->m_pClient->SendData("handshake",strlen("handshake")))
+	{
+		p->MessageBox(TEXT("与服务器匹配信息出错"),TEXT("认证出错"),MB_ICONERROR);
+		goto __end;
+	}
+	cnt = 5;
+	while (cnt-- >0 && !p->m_bHandshake)
+	{
+		Sleep(1000);
+	}
+	if (!p->m_bHandshake)
+	{
+		p->MessageBox(TEXT("与服务器匹配信息出错"),TEXT("认证出错"),MB_ICONERROR);
+		goto __end;
+	}
+
 	p->SetDlgItemText(IDC_STATUS,TEXT("正在查询机器序列号......"));
 	retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject softwarelicensingservice).OA3xOriginalProductKey",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
 	if(retval)
@@ -447,6 +469,7 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 		}
 		p->GetDeviceAddress();
 		p->GetIMEI();
+		Sleep(500);
 		if (fp.Open(TEXT("oa3.xml"),CFile::modeRead))
 		{
 			dwLen = (DWORD)fp.GetLength();
@@ -466,6 +489,11 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 			}
 			delete szBuf;
 		}
+		else
+		{
+			p->MessageBox(TEXT("打开Key文件失败，请确认刷KEY工具或刷KEY盘中oa3.xml文件可读！"),TEXT("错误"),MB_ICONERROR);
+			goto __end;
+		}
 		p->SetDlgItemText(IDC_STATUS,TEXT("等待主板序列号的输入......"));
 repeat:
 		if (dlg.DoModal()==IDOK)
@@ -474,15 +502,17 @@ repeat:
 		}
 		else
 		{
-			szSN = TEXT("0000000000000000000000000");
+			//szSN = TEXT("0000000000000000000000000");
+			goto skip;
 		}
 
+		/*
 		if (szSN.GetLength() == 0)
 		{
 			p->MessageBox(TEXT("主板序列号不能为空，请输入序列号按OK确认，取消则默认序列号为0"),TEXT("错误"),MB_ICONERROR);
 			goto repeat;
 		}
-
+*/
 		p->SetDlgItemText(IDC_STATUS,TEXT("正在写入序列号......"));
 		szBSN = TEXT("cmd.exe /c amidewin.exe /bs \"");
 		szBSN += szSN;
@@ -494,11 +524,11 @@ repeat:
 		CreateProcessA(NULL,szTmp,&sa,&sa,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
 
-		memset(wszTmp,0,sizeof(wszTmp));
-		wcscpy(wszTmp,szSN.GetBuffer(32));
-		wcstombs(p->m_KeyInfo.SN,wszTmp,32);
-		szSN.ReleaseBuffer();
-
+		//memset(wszTmp,0,sizeof(wszTmp));
+		//wcscpy(wszTmp,szSN.GetBuffer(32));
+		//wcstombs(p->m_KeyInfo.BSN,wszTmp,32);
+		//szSN.ReleaseBuffer();
+skip:
 		p->SetDlgItemText(IDC_STATUS,TEXT("正在刷入KEY码......"));
 		retval=CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
@@ -512,6 +542,60 @@ repeat:
 			p->SetDlgItemText(IDC_STATUS,TEXT("Key刷写失败！"));
 			goto __end;
 		}
+		//----------------------------------------------------------------------
+		retval=CreateProcessA(NULL,"cmd.exe /c amidewin.exe /bs",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
+		if(retval)
+		{
+			WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			dwLen=GetFileSize(hReadPipe,NULL);
+			char *buf=new char[dwLen+1];
+			retval=ReadFile(hReadPipe,buf,dwLen,&dwRead,NULL);
+			if (strlen(buf))
+			{
+				char* p1=strchr(buf,'"');
+				if (p1)
+				{
+					p1++;
+					char* p2=strchr(p1,'"');
+					if (p2)
+					{
+						*p2 = 0;
+						strcpy(p->m_KeyInfo.BSN,p1);
+					}
+				}
+			}
+			delete buf;
+		}
+		//----------------------------------------------------------------------
+		retval=CreateProcessA(NULL,"cmd.exe /c amidewin.exe /ss",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
+		if(retval)
+		{
+			WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			dwLen=GetFileSize(hReadPipe,NULL);
+			char *buf=new char[dwLen+1];
+			retval=ReadFile(hReadPipe,buf,dwLen,&dwRead,NULL);
+			if (strlen(buf))
+			{
+				char* p1=strchr(buf,'"');
+				if (p1)
+				{
+					p1++;
+					char* p2=strchr(p1,'"');
+					if (p2)
+					{
+						*p2 = 0;
+						strcpy(p->m_KeyInfo.SSN,p1);
+					}
+				}
+			}
+			delete buf;
+		}
+		//----------------------------------------------------------------------
+
 		len=sizeof(KeyInfo) - 4;
 		p->m_KeyInfo.CRC = p->CRC32(0xFFFFFFFF,(BYTE*)&p->m_KeyInfo,len);
 		cnt = 1, cnt2 = 10;

@@ -6,7 +6,8 @@
 #include "TCPSocket.h"
 typedef struct _tagKeyInfo
 {
-	char SN[32];
+	char BSN[32];
+	char SSN[32];
 	char PKID[32];
 	char KEY[32];
 	char WIFI[32];
