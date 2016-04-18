@@ -85,7 +85,7 @@ END
 IDD_OAKITS_DIALOG DIALOGEX 0, 0, 191, 71
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "OA3Client v6.1"
+CAPTION "OA3Client v6.2"
 FONT 12, "Courier", 400, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "Ö´ÐÐ",IDC_START,35,36,44,16
@@ -113,8 +113,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 6,1,0,0
- PRODUCTVERSION 6,1,0,0
+ FILEVERSION 6,2,0,0
+ PRODUCTVERSION 6,2,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -131,12 +131,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Techvision"
             VALUE "FileDescription", "OA Tool"
-            VALUE "FileVersion", "6.1"
+            VALUE "FileVersion", "6.2"
             VALUE "InternalName", "OAKits.exe"
             VALUE "LegalCopyright", "Kelvin Cheng.  All rights reserved."
             VALUE "OriginalFilename", "OAKits.exe"
             VALUE "ProductName", "OA Tool"
-            VALUE "ProductVersion", "6.1"
+            VALUE "ProductVersion", "6.2"
         END
     END
     BLOCK "VarFileInfo"
@@ -169,6 +169,14 @@ BEGIN
 END
 #endif    // APSTUDIO_INVOKED
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DATA
+//
+
+IDR_CHECK               DATA                    "res\\Check.exe"
+IDR_CFG                 DATA                    "res\\OA3ToolFile.cfg"
 
 /////////////////////////////////////////////////////////////////////////////
 //

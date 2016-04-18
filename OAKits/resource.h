@@ -9,6 +9,9 @@
 #define IDP_SOCKETS_INIT_FAILED         103
 #define IDR_MAINFRAME                   104
 #define IDD_SNDLG                       105
+#define IDR_CHECK                       131
+#define IDR_OA3TOOLFILE                 133
+#define IDR_CFG                         133
 #define IDC_START                       1001
 #define IDC_CBR                         1002
 #define IDC_SN                          1003
@@ -19,7 +22,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        130
+#define _APS_NEXT_RESOURCE_VALUE        134
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1010
 #define _APS_NEXT_SYMED_VALUE           101

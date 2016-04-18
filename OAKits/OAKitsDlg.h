@@ -60,6 +60,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	void init_crc_table();
+	BOOL GetProductKey();
 	DWORD CRC32(DWORD crc,BYTE *buffer, DWORD size);
 	BOOL GetDeviceAddress();
 	BOOL GetIMEI();

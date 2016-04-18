@@ -277,6 +277,24 @@ BOOL COAKitsDlg::OnInitDialog()
 	m_pClient->m_OnDisconnect = OnDisconnect;
 	m_pClient->m_OnRead = OnRead;
 
+	CFile fp;
+	BOOL bRet;
+	HRSRC hSrc = FindResource(NULL,MAKEINTRESOURCE(IDR_CHECK),TEXT("DATA"));
+	HGLOBAL hGl = LoadResource(NULL,hSrc);
+	DWORD dwLen = SizeofResource(NULL,hSrc);
+	LPBYTE lpBuf = (LPBYTE)LockResource(hGl);
+	bRet = fp.Open(TEXT("Check.exe"),CFile::modeCreate|CFile::modeReadWrite);
+	fp.Write((LPBYTE)lpBuf,dwLen);
+	fp.Close();
+
+	hSrc = FindResource(NULL,MAKEINTRESOURCE(IDR_CFG),TEXT("DATA"));
+	hGl = LoadResource(NULL,hSrc);
+	dwLen = SizeofResource(NULL,hSrc);
+	lpBuf = (LPBYTE)LockResource(hGl);
+	fp.Open(TEXT("oa3toolfile.cfg"),CFile::modeCreate|CFile::modeReadWrite);
+	fp.Write((LPBYTE)lpBuf,dwLen);
+	fp.Close();
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -388,6 +406,93 @@ void COAKitsDlg::AddLog(CString log)
 	//output->LineScroll(output->GetLineCount());
 }
 
+BOOL COAKitsDlg::GetProductKey()
+{
+	BOOL retval,result=FALSE;
+	PROCESS_INFORMATION pi={0};
+	STARTUPINFOA si={0};
+	SECURITY_ATTRIBUTES sa={0};
+	HANDLE hReadPipe,hWritePipe;
+	DWORD retcode = -1;
+	CFile fp;
+
+	sa.bInheritHandle=TRUE;
+	sa.nLength=sizeof SECURITY_ATTRIBUTES;
+	sa.lpSecurityDescriptor=NULL;
+	retval=CreatePipe(&hReadPipe,&hWritePipe,&sa,0);
+	if(retval)
+	{
+		si.cb=sizeof STARTUPINFO;
+		si.wShowWindow=SW_HIDE;
+		si.dwFlags=STARTF_USESHOWWINDOW|STARTF_USESTDHANDLES;
+		si.hStdOutput=si.hStdError=hWritePipe;
+		retval=CreateProcessA(NULL,"cmd.exe /c Check.exe",&sa,&sa,TRUE,0,NULL,0,&si,&pi);
+		if(retval)
+		{
+			DWORD dwLen,dwRead;
+			WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
+			GetExitCodeProcess(pi.hProcess,&retcode);
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			if (retcode != 0)
+			{
+				goto end;
+			}
+			dwLen=GetFileSize(hReadPipe,NULL);
+			char *buff=new char [dwLen+1];
+			char dpk[30]={0};
+			char* vptr,*token="Product key:       ";
+			memset(buff,0,dwLen+1);
+			retval=ReadFile(hReadPipe,buff,dwLen,&dwRead,NULL);
+			vptr=strstr(buff+700,token);
+			if (vptr)
+			{
+				vptr +=strlen(token);
+				strncpy(dpk,vptr,29);
+				result = TRUE;
+			}
+			delete buff;
+		}
+		if (result == FALSE)
+		{
+			goto end;
+		}
+		retval=CreateProcessA(NULL,"cmd.exe /c oa3tool.exe /report /configfile=oa3toolfile.cfg",&sa,&sa,TRUE,0,NULL,0,&si,&pi);
+		if(retval)
+		{
+			DWORD dwLen;
+			WaitForSingleObject(pi.hThread,INFINITE);//等待命令行执行完毕
+			GetExitCodeProcess(pi.hProcess,&retcode);
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			if (retcode)
+			{
+				goto end;
+			}
+			if (!fp.Open(TEXT("oa3.xml"),CFile::modeRead|CFile::typeBinary))
+			{
+				goto end;
+			}
+			dwLen=(DWORD)fp.GetLength();
+			char* fBuff = new char[dwLen];
+			char pkid[14]={0};
+			fp.Read(fBuff,dwLen);
+			fp.Close();
+			char* dpk=strstr(fBuff,"<ProductKeyID>");
+			if (dpk)
+			{
+				strncpy(m_KeyInfo.PKID,dpk+14,13);
+			}
+			delete fBuff;
+		}
+end:
+		CloseHandle(hWritePipe);
+		CloseHandle(hReadPipe);
+	}
+	return result;
+}
+
+
 UINT COAKitsDlg::KeyThread(LPVOID lp)
 {
 	COAKitsDlg* p = (COAKitsDlg*)lp;
@@ -443,6 +548,8 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 	}
 
 	p->SetDlgItemText(IDC_STATUS,TEXT("正在查询机器序列号......"));
+	bHasKey = p->GetProductKey();
+	/*
 	retval=CreateProcessA(NULL,"powershell.exe (get-wmiobject softwarelicensingservice).OA3xOriginalProductKey",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
 	if(retval)
 	{
@@ -454,6 +561,7 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 			bHasKey = TRUE;
 		}
 	}
+	*/
 
 	if (!bHasKey)
 	{
@@ -494,6 +602,7 @@ UINT COAKitsDlg::KeyThread(LPVOID lp)
 			p->MessageBox(TEXT("打开Key文件失败，请确认刷KEY工具或刷KEY盘中oa3.xml文件可读！"),TEXT("错误"),MB_ICONERROR);
 			goto __end;
 		}
+#ifdef ENABLE_SERIAL_FUNCTION
 		p->SetDlgItemText(IDC_STATUS,TEXT("等待主板序列号的输入......"));
 repeat:
 		if (dlg.DoModal()==IDOK)
@@ -529,6 +638,7 @@ repeat:
 		//wcstombs(p->m_KeyInfo.BSN,wszTmp,32);
 		//szSN.ReleaseBuffer();
 skip:
+#endif
 		p->SetDlgItemText(IDC_STATUS,TEXT("正在刷入KEY码......"));
 		retval=CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
@@ -703,13 +813,15 @@ skip:
 		{
 			if (bHasCBR)
 			{
-				mbstowcs(wszPKID,szKeyID,32);
+				mbstowcs(wszPKID,p->m_KeyInfo.PKID,32);
 				p->SetDlgItemText(IDC_PKID,wszPKID);
 				p->MessageBox(TEXT("CBR 上传成功！"),TEXT("CBR"),MB_ICONINFORMATION);
 				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 上传成功！......"));
 			}
 			else
 			{
+				mbstowcs(wszPKID,p->m_KeyInfo.PKID,32);
+				p->SetDlgItemText(IDC_PKID,wszPKID);
 				p->MessageBox(TEXT("CBR 已上传，请不要重复提交！"),TEXT("CBR"),MB_ICONWARNING);
 				p->SetDlgItemText(IDC_STATUS,TEXT("CBR 已上传，请勿重复提交！......"));
 			}
