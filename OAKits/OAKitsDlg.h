@@ -79,4 +79,5 @@ public:
 	afx_msg void OnBnClickedCbr();
 	int Reboot(void);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	BOOL ModifySerialNumber(char* strSN);
 };

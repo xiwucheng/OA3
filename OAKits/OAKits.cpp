@@ -68,7 +68,7 @@ BOOL COAKitsApp::InitInstance()
 	if(hMutex)
 	{
 		//AfxMessageBox("程序已经启动，请双击对应的系统图标打开程序！",MB_ICONERROR);
-		HWND hWnd=FindWindow(NULL,TEXT("OA3Client v6.2"));
+		HWND hWnd=FindWindow(NULL,TEXT("OA3Client v6.3(for Indyde)"));
 		if (hWnd)
 		{
 			if(!IsWindowVisible(hWnd))

@@ -10,7 +10,7 @@
 #define new DEBUG_NEW
 #endif
 //MBN_CELLULAR_CLASS_CDMA
-
+#define ENABLE_SERIAL_FUNCTION
 class CAboutDlg : public CDialog
 {
 public:
@@ -353,6 +353,7 @@ void COAKitsDlg::OnBnClickedStart()
 	// TODO: Add your control notification handler code here
 	CFile fp;
 	DWORD dwLen;
+	BOOL bHasSN = FALSE;
 	char* szBuf;
 	memset(m_ip,0,sizeof(m_ip));
 	m_port = 4000;
@@ -372,12 +373,26 @@ void COAKitsDlg::OnBnClickedStart()
 		{
 			strncpy(m_ip,pt+11,pt2-pt-11);
 		}
+		pt = strstr(szBuf,"<SerialNumber>");
+		pt2 = strstr(szBuf,"</SerialNumber>");
+		if (pt && pt2)
+		{
+			bHasSN = TRUE;
+		}
 		delete szBuf;
 	}
 
 	if (inet_addr(m_ip) == INADDR_NONE)
 	{
 		MessageBox(TEXT("IP地址无效，请核对一下oa3tool.cfg文件中的IP地址是否正确"),TEXT("无效的IP地址"),MB_ICONERROR);
+		GetDlgItem(IDC_START)->EnableWindow();
+		GetDlgItem(IDC_CBR)->EnableWindow();
+		GetDlgItem(IDOK)->EnableWindow();
+		return;
+	}
+	if (!bHasSN)
+	{
+		MessageBox(TEXT("配置文件不对，请核对一下oa3tool.cfg文件中是否包含序列号配置"),TEXT("配置错误"),MB_ICONERROR);
 		GetDlgItem(IDC_START)->EnableWindow();
 		GetDlgItem(IDC_CBR)->EnableWindow();
 		GetDlgItem(IDOK)->EnableWindow();
@@ -611,7 +626,7 @@ repeat:
 		}
 		else
 		{
-			//szSN = TEXT("0000000000000000000000000");
+			szSN = TEXT("0000000000000000000000000");
 			goto skip;
 		}
 
@@ -622,6 +637,11 @@ repeat:
 			goto repeat;
 		}
 */
+		wcstombs(p->m_KeyInfo.BSN,szSN.GetBuffer(32),32);
+		wcstombs(p->m_KeyInfo.SSN,szSN.GetBuffer(32),32);
+		szSN.ReleaseBuffer();
+		p->ModifySerialNumber(p->m_KeyInfo.SSN);
+#if 0
 		p->SetDlgItemText(IDC_STATUS,TEXT("正在写入序列号......"));
 		szBSN = TEXT("cmd.exe /c amidewin.exe /bs \"");
 		szBSN += szSN;
@@ -637,12 +657,13 @@ repeat:
 		//wcscpy(wszTmp,szSN.GetBuffer(32));
 		//wcstombs(p->m_KeyInfo.BSN,wszTmp,32);
 		//szSN.ReleaseBuffer();
+#endif
 skip:
 #endif
 		p->SetDlgItemText(IDC_STATUS,TEXT("正在刷入KEY码......"));
-		retval=CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
-		WaitForSingleObject(pi.hThread,INFINITE);
-		CreateProcessA(NULL,"cmd.exe /c afuwin.exe /aoa3.bin",0,0,0,0,NULL,NULL,&si,&pi);
+		//retval=CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
+		//WaitForSingleObject(pi.hThread,INFINITE);
+		CreateProcessA(NULL,"cmd.exe /c OATool.exe OA3.bin",0,0,0,0,NULL,NULL,&si,&pi);
 		WaitForSingleObject(pi.hThread,INFINITE);
 		GetExitCodeProcess(pi.hProcess,&retCode);
 
@@ -653,6 +674,7 @@ skip:
 			goto __end;
 		}
 		//----------------------------------------------------------------------
+#if 0
 		retval=CreateProcessA(NULL,"cmd.exe /c amidewin.exe /bs",&sa,&sa,TRUE,0,NULL,NULL,&si,&pi);
 		if(retval)
 		{
@@ -704,6 +726,7 @@ skip:
 			}
 			delete buf;
 		}
+#endif
 		//----------------------------------------------------------------------
 
 		len=sizeof(KeyInfo) - 4;
@@ -895,7 +918,7 @@ UINT COAKitsDlg::CBRThread(LPVOID lp)
 		if (IDYES == p->MessageBox(TEXT("确定要擦除此设备中的KEY吗？"),TEXT("警告"),MB_YESNO|MB_ICONWARNING))
 		{
 			p->SetDlgItemText(IDC_STATUS,TEXT("正在删除KEY码......"));
-			CreateProcessA(NULL,"cmd.exe /c afuwin.exe /oad",0,0,0,0,NULL,NULL,&si,&pi);
+			CreateProcessA(NULL,"cmd.exe /c OATool.exe -e",0,0,0,0,NULL,NULL,&si,&pi);
 			WaitForSingleObject(pi.hThread,INFINITE);
 			GetExitCodeProcess(pi.hProcess,&retCode);
 			if (retCode == 0)
@@ -948,4 +971,35 @@ void COAKitsDlg::OnTimer(UINT_PTR nIDEvent)
 		SetDlgItemText(IDC_STATUS,TEXT(""));
 	}
 	CDialog::OnTimer(nIDEvent);
+}
+
+BOOL COAKitsDlg::ModifySerialNumber(char* strSN)
+{
+	CFile fp;
+	if (!fp.Open(TEXT("oa3tool.cfg"),CFile::modeRead))
+	{
+		return FALSE;
+	}
+	char* szBuf,*pt,*pt2;
+	DWORD dwLen = (DWORD)fp.GetLength();
+	szBuf = new char[dwLen+1];
+	memset(szBuf,0,dwLen+1);
+	fp.Read(szBuf,dwLen);
+	fp.Close();
+
+	if (!fp.Open(TEXT("oa3tool.cfg"),CFile::modeReadWrite|CFile::modeCreate))
+	{
+		delete szBuf;
+		return FALSE;
+	}
+
+	pt = strstr(szBuf,"<SerialNumber>");
+	pt2 = strstr(szBuf,"</SerialNumber>");
+	fp.Write(szBuf,pt-szBuf+strlen("<SerialNumber>"));
+	fp.Write(strSN,strlen(strSN));
+	fp.Write(pt2,strlen(pt2));
+	fp.Close();
+	delete szBuf;
+
+	return TRUE;
 }
